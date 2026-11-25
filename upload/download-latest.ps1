@@ -1,4 +1,11 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
+function Get-Sha256Hex([string]$Path) {
+    $sha = [Security.Cryptography.SHA256]::Create()
+    $stream = [IO.File]::OpenRead($Path)
+    try { return ([BitConverter]::ToString($sha.ComputeHash($stream))).Replace('-', '').ToLowerInvariant() }
+    finally { $stream.Dispose(); $sha.Dispose() }
+}
+
 $Repo = 'jiulin-hub/jiulin_learning_library'
 $RemoteUploadDir = 'upload'
 $AssetName = 'LuckyTeam_maxREL.zip'
@@ -13,7 +20,7 @@ Write-Host "正在从 $Repo 下载最新版..."
 Invoke-WebRequest -Uri "$BaseUrl/$AssetName" -OutFile $ZipPath
 Invoke-WebRequest -Uri "$BaseUrl/$AssetName.sha256" -OutFile $HashPath
 $expected = ((Get-Content -LiteralPath $HashPath -Raw).Trim() -split '\s+')[0].ToLowerInvariant()
-$actual = (Get-FileHash -LiteralPath $ZipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+$actual = Get-Sha256Hex $ZipPath
 if ($expected -ne $actual) {
     Remove-Item -LiteralPath $ZipPath -Force -ErrorAction SilentlyContinue
     throw "SHA-256 校验失败，已删除下载文件。expected=$expected actual=$actual"
